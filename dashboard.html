@@ -1,0 +1,106 @@
+<!-- dashboard.html - Manager Dashboard -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coop Sales Tracker - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!--  <script src="js/firebase.js"></script>-->
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Manager Dashboard</h3>
+    <button class="btn btn-danger" onclick="logout()">Logout</button>
+  </div>
+  <div class="card p-4 shadow-sm mb-4">
+    <h5>Add Sales Entry</h5>
+    <div class="mb-3">
+      <select id="store" class="form-select">
+        <option value="East Barnet">East Barnet</option>
+        <option value="Wood House">Wood House</option>
+      </select>
+    </div>
+    <input type="text" id="college" class="form-control mb-3" placeholder="College Name">
+    <input type="number" id="cardsSold" class="form-control mb-3" placeholder="Cards Sold">
+    <button onclick="submitSale()" class="btn btn-success">Submit</button>
+    <p id="submit-msg" class="text-success mt-2"></p>
+  </div>
+
+  <div class="card p-4 shadow-sm">
+    <h5>Today's Sales</h5>
+    <ul id="salesList" class="list-group"></ul>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCbw8b_ag8QyunuIJIXl24SCepm439uzVU",
+    authDomain: "coop-pro.firebaseapp.com",
+    projectId: "coop-pro",
+    storageBucket: "coop-pro.appspot.com",
+    messagingSenderId: "770543345465",
+    appId: "1:770543345465:web:33089459f3d6eba9b992e8",
+    measurementId: "G-T4463ZST23"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+<script>
+  if (!localStorage.getItem("auth")) {
+    window.location.href = "index.html";
+  }
+
+  function logout() {
+    localStorage.removeItem("auth");
+    window.location.href = "index.html";
+  }
+
+  async function submitSale() {
+    const store = document.getElementById("store").value;
+    const college = document.getElementById("college").value;
+    const cardsSold = parseInt(document.getElementById("cardsSold").value);
+
+    if (!college || isNaN(cardsSold)) {
+      alert("Please fill out all fields correctly.");
+      return;
+    }
+
+    await db.collection("sales").add({
+      store,
+      college,
+      cardsSold,
+      date: new Date().toISOString().split("T")[0]
+    });
+
+    document.getElementById("submit-msg").innerText = "Sale submitted successfully!";
+    document.getElementById("college").value = "";
+    document.getElementById("cardsSold").value = "";
+    loadTodaySales();
+  }
+
+  async function loadTodaySales() {
+    const today = new Date().toISOString().split("T")[0];
+    const snapshot = await db.collection("sales").where("date", "==", today).get();
+    const list = document.getElementById("salesList");
+    list.innerHTML = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.innerText = `${data.college} (${data.store}) - ${data.cardsSold} cards`;
+      list.appendChild(li);
+    });
+  }
+
+  window.onload = loadTodaySales;
+</script>
+</body>
+</html>

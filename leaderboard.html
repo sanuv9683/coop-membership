@@ -1,0 +1,134 @@
+<!-- leaderboard.html - Colleges View Performance (Fixed) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coop Sales Tracker - Leaderboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbw8b_ag8QyunuIJIXl24SCepm439uzVU",
+            authDomain: "coop-pro.firebaseapp.com",
+            projectId: "coop-pro",
+            storageBucket: "coop-pro.appspot.com",
+            messagingSenderId: "770543345465",
+            appId: "1:770543345465:web:33089459f3d6eba9b992e8",
+            measurementId: "G-T4463ZST23"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Sales Leaderboard</h3>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="card p-4 shadow-sm mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <select id="storeFilter" class="form-select">
+                    <option value="East Barnet">East Barnet</option>
+                    <option value="Wood House">Wood House</option>
+                    <option value="All">All Stores</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select id="timeFilter" class="form-select">
+                    <option value="day">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" onclick="loadLeaderboard()">Show Rankings</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 shadow-sm">
+        <h5>Top Sellers</h5>
+        <ul id="leaderboardList" class="list-group"></ul>
+    </div>
+</div>
+
+<script>
+    if (!localStorage.getItem("auth")) {
+        window.location.href = "index.html";
+    }
+
+    function logout() {
+        localStorage.removeItem("auth");
+        window.location.href = "index.html";
+    }
+
+    function getDateRange(type) {
+        const now = new Date();
+        let startDate;
+        const today = new Date();
+
+        switch(type) {
+            case 'day':
+                startDate = new Date(today);
+                break;
+            case 'week':
+                startDate = new Date(today.setDate(today.getDate() - 7));
+                break;
+            case 'month':
+                startDate = new Date(today.setMonth(today.getMonth() - 1));
+                break;
+            case 'year':
+                startDate = new Date(today.setFullYear(today.getFullYear() - 1));
+                break;
+        }
+        return startDate.toISOString().split("T")[0];
+    }
+
+    async function loadLeaderboard() {
+        const store = document.getElementById("storeFilter").value;
+        const timeframe = document.getElementById("timeFilter").value;
+        const startDate = getDateRange(timeframe);
+
+        let query = db.collection("sales").where("date", ">=", startDate);
+        if (store !== "All") {
+            query = query.where("store", "==", store);
+        }
+
+        try {
+            const snapshot = await query.get();
+            const salesMap = {};
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (!salesMap[data.college]) {
+                    salesMap[data.college] = 0;
+                }
+                salesMap[data.college] += data.cardsSold;
+            });
+
+            const sorted = Object.entries(salesMap)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, total]) => `${name} - ${total} cards`);
+
+            const list = document.getElementById("leaderboardList");
+            list.innerHTML = "";
+            sorted.forEach(item => {
+                const li = document.createElement("li");
+                li.className = "list-group-item";
+                li.innerText = item;
+                list.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Error loading leaderboard:", error);
+        }
+    }
+</script>
+</body>
+</html>
